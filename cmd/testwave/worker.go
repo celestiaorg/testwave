@@ -1,6 +1,7 @@
 package testwave
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -29,9 +30,9 @@ func workerCmd(testPlanPlaybook playbook.Playbook) *cobra.Command {
 				os.Exit(1)
 			}
 
-			uid := os.Getenv(worker.EnvUID)
+			uid := os.Getenv(worker.EnvWorkerUID)
 			if uid == "" {
-				logrus.Errorf("Error reading worker UID from environment variable %s", worker.EnvUID)
+				logrus.Errorf("Error reading worker UID from environment variable %s", worker.EnvWorkerUID)
 				os.Exit(1)
 			}
 
@@ -124,9 +125,13 @@ func prepareRedisClient() *redis.Client {
 
 	redisDB, err := strconv.ParseInt(os.Getenv(message.EnvRedisDB), 10, 64)
 	if err != nil {
-		logrus.Info("Error reading redis DB from environment variable `%s`, defaulted to `0`: %v", message.EnvRedisDB, err)
+		logrus.Infof("Error reading redis DB from environment variable `%s`, defaulted to `0`: %v", message.EnvRedisDB, err)
 		redisDB = 0
 	}
+
+	fmt.Printf("redisAddr: %v\n", redisAddr)
+	fmt.Printf("redisPassword: %v\n", redisPassword)
+	fmt.Printf("redisDB: %v\n", redisDB)
 
 	return redis.NewClient(&redis.Options{
 		Addr:     redisAddr,

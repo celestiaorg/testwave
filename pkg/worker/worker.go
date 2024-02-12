@@ -11,7 +11,8 @@ const (
 	Cmd = "worker"
 
 	EnvNodeType  = "WORKER_NODE_TYPE"
-	EnvUID       = "WORKER_UID" // same as pod name
+	EnvWorkerUID = "WORKER_UID"
+	EnvPodUID    = "POD_UID"
 	EnvTestPlan  = "TEST_PLAN"
 	EnvNamespace = "NAMESPACE" //k8s namespace
 

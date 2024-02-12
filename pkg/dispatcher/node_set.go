@@ -15,7 +15,13 @@ import (
 	"github.com/celestiaorg/testwave/pkg/worker"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
+
+type dependentServicesResponse struct {
+	redisPort              int32
+	redisIP, minioEndpoint string
+}
 
 func (d *Dispatcher) DeployNodeSet(ctx context.Context, wg *sync.WaitGroup, ns *playbook.NodeSet) {
 	defer wg.Done()
@@ -35,6 +41,45 @@ func (d *Dispatcher) DeployNodeSet(ctx context.Context, wg *sync.WaitGroup, ns *
 	fmt.Printf("NodeSet `%s` pod deployed\n", ns.UID)
 }
 
+func (d *Dispatcher) setupDependentServices(ctx context.Context) (*dependentServicesResponse, error) {
+	var (
+		res                  = &dependentServicesResponse{}
+		wg                   sync.WaitGroup
+		minioErr, minioEpErr error
+		redisErr, redisIpErr error
+	)
+
+	// run these two independent tasks in two different go routines
+	// for sake of optimization
+	func() {
+		wg.Add(1)
+		defer wg.Done()
+		if redisErr = d.deployRedis(ctx); redisErr != nil {
+			return
+		}
+		res.redisIP, res.redisPort, redisIpErr = d.RedisIPPort(ctx)
+	}()
+
+	func() {
+		wg.Add(1)
+		defer wg.Done()
+		if minioErr = d.deployMinio(ctx); minioErr != nil {
+			return
+		}
+		res.minioEndpoint, minioEpErr = d.getMinioEndpoint(ctx)
+	}()
+
+	wg.Wait()
+
+	for _, err := range []error{redisErr, minioErr, minioEpErr, redisIpErr} {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return res, nil
+}
+
 func (d *Dispatcher) createPodForNodeSet(ctx context.Context, nodeSet *playbook.NodeSet) (*v1.Pod, error) {
 	if nodeSet == nil {
 		return nil, ErrNilNodeSet
@@ -43,56 +88,20 @@ func (d *Dispatcher) createPodForNodeSet(ctx context.Context, nodeSet *playbook.
 		return nil, ErrNoWorkersInNodeSet.Wrap(fmt.Errorf("NodeSet %s", nodeSet.UID))
 	}
 
-	if err := d.deployRedis(ctx); err != nil {
-		return nil, err
-	}
-
-	redisIP, redisPort, err := d.RedisIPPort(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := d.deployMinio(ctx); err != nil {
-		return nil, err
-	}
-	minioEndpoint, err := d.getMinioEndpoint(ctx)
+	depServices, err := d.setupDependentServices(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	defaultEnvs := []v1.EnvVar{
-		{
-			Name:  worker.EnvTestPlan,
-			Value: d.Playbook.Name(),
-		},
-		{
-			Name:  worker.EnvUID,
-			Value: nodeSet.UID,
-		},
-		{
-			Name:  message.EnvRedisAddr,
-			Value: fmt.Sprintf("%s:%d", redisIP, redisPort),
-		},
-		{
-			Name:  message.EnvRedisDB,
-			Value: RedisDB,
-		},
-		{
-			Name:  message.EnvRedisPassword,
-			Value: RedisPassword,
-		},
-		{
-			Name:  worker.EnvMinioEndpoint,
-			Value: minioEndpoint,
-		},
-		{
-			Name:  worker.EnvMinioAccessKey,
-			Value: minioAccessKey,
-		},
-		{
-			Name:  worker.EnvMinioSecretKey,
-			Value: minioSecretKey,
-		},
+		{Name: worker.EnvTestPlan, Value: d.Playbook.Name()},
+		{Name: worker.EnvPodUID, Value: nodeSet.UID},
+		{Name: worker.EnvMinioEndpoint, Value: depServices.minioEndpoint},
+		{Name: worker.EnvMinioAccessKey, Value: minioAccessKey},
+		{Name: worker.EnvMinioSecretKey, Value: minioSecretKey},
+		{Name: message.EnvRedisAddr, Value: fmt.Sprintf("%s:%d", depServices.redisIP, depServices.redisPort)},
+		{Name: message.EnvRedisDB, Value: RedisDB},
+		{Name: message.EnvRedisPassword, Value: RedisPassword},
 	}
 
 	pod := &v1.Pod{
@@ -111,6 +120,7 @@ func (d *Dispatcher) createPodForNodeSet(ctx context.Context, nodeSet *playbook.
 		}
 
 		wEnvs := defaultEnvs
+		wEnvs = append(wEnvs, v1.EnvVar{Name: worker.EnvWorkerUID, Value: w.UID})
 		for k, v := range w.Envs {
 			wEnvs = append(wEnvs, v1.EnvVar{
 				Name:  k,
@@ -129,6 +139,11 @@ func (d *Dispatcher) createPodForNodeSet(ctx context.Context, nodeSet *playbook.
 			Env:          wEnvs,
 			Args:         []string{constants.DefaultBinPath, worker.Cmd},
 			VolumeMounts: vols,
+			// We need these privileges to allow BitTwister to shape the traffic
+			SecurityContext: &v1.SecurityContext{
+				Capabilities: &v1.Capabilities{Add: []v1.Capability{"NET_ADMIN"}},
+				Privileged:   ptr.To[bool](true),
+			},
 		}
 		pod.Spec.Containers = append(pod.Spec.Containers, wc)
 	}

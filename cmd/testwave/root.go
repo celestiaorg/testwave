@@ -10,6 +10,7 @@ import (
 const (
 	DefaultBinPath = "/app/testwave"
 	StartCmd       = "start"
+	LogsCmd        = "logs"
 	DispatcherCmd  = dispatcher.Cmd
 	WorkerCmd      = worker.Cmd
 )
@@ -20,6 +21,7 @@ func rootCmd(testPlanPlaybook playbook.Playbook) *cobra.Command {
 		dispatcherCmd(testPlanPlaybook),
 		workerCmd(testPlanPlaybook),
 		startCmd(),
+		logsCmd(),
 	)
 	return rootCmd
 }

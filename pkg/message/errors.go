@@ -28,4 +28,6 @@ var (
 	ErrMsgNotFound   = &Error{Code: "ErrMsgNotFound", Message: "Message not found"}
 	ErrGetPubResult  = &Error{Code: "ErrGetPubResult", Message: "Error getting publish result"}
 	ErrNoSubscribers = &Error{Code: "ErrNoSubscribers", Message: "No subscribers"}
+	ErrTypeCasting   = &Error{Code: "ErrTypeCasting", Message: "Type casting failed"}
+	ErrCtxDone       = &Error{Code: "ErrCtxDone", Message: "Context Done"}
 )
