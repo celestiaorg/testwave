@@ -13,6 +13,7 @@ import (
 	"github.com/celestiaorg/testwave/pkg/message"
 	"github.com/celestiaorg/testwave/pkg/playbook"
 	"github.com/celestiaorg/testwave/pkg/worker"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -28,17 +29,17 @@ func (d *Dispatcher) DeployNodeSet(ctx context.Context, wg *sync.WaitGroup, ns *
 
 	pod, err := d.createPodForNodeSet(ctx, ns)
 	if err != nil {
-		fmt.Printf("Error creating pod for NodeSet %s: %v\n", ns.UID, err)
+		logrus.Errorf("Error creating pod for NodeSet %s: %v", ns.UID, err)
 		return
 	}
 
 	_, err = d.Clientset.CoreV1().Pods(d.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
-		fmt.Printf("Error deploying pod for NodeSet %s : %v\n", ns.UID, err)
+		logrus.Errorf("Error deploying pod for NodeSet %s : %v", ns.UID, err)
 		return
 	}
 
-	fmt.Printf("NodeSet `%s` pod deployed\n", ns.UID)
+	logrus.Infof("NodeSet `%s` pod deployed", ns.UID)
 }
 
 func (d *Dispatcher) setupDependentServices(ctx context.Context) (*dependentServicesResponse, error) {

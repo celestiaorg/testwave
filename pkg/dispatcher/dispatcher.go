@@ -38,6 +38,7 @@ func (d *Dispatcher) RunTest() {
 		return
 	}
 
+	// TODO: Add a context with a timeout and user input to cancel the deployment
 	ctx := context.TODO()
 	var wg sync.WaitGroup
 	for _, nodeSet := range d.Playbook.NodeSets() {
@@ -49,26 +50,6 @@ func (d *Dispatcher) RunTest() {
 
 	logrus.Info("All worker nodes deployed. Test in progress...")
 }
-
-// func (d *Dispatcher) WorkerLogs(ctx context.Context, nodeSet *playbook.NodeSet) (string, error) {
-// 	logrus.Infof("Fetching logs from worker `%s` node...", nodeSet.UID)
-
-// 	if len(pod.Spec.Containers) == 0 {
-// 		return "", fmt.Errorf("no containers in pod %s", pod.Name)
-// 	}
-
-// 	logOptions := v1.PodLogOptions{
-// 		Container: pod.Spec.Containers[0].Name,
-// 	}
-
-// 	req := clientset.CoreV1().Pods(namespace).GetLogs(pod.Name, &logOptions)
-// 	logs, err := req.DoRaw(ctx)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	return string(logs), nil
-// }
 
 func (d *Dispatcher) DispatcherPod(imageName string) (*v1.Pod, error) {
 	dispatcherUID, err := names.NewRandomK8(PodPrefix)

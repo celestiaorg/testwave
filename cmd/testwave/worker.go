@@ -1,7 +1,6 @@
 package testwave
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 
@@ -128,10 +127,6 @@ func prepareRedisClient() *redis.Client {
 		logrus.Infof("Error reading redis DB from environment variable `%s`, defaulted to `0`: %v", message.EnvRedisDB, err)
 		redisDB = 0
 	}
-
-	fmt.Printf("redisAddr: %v\n", redisAddr)
-	fmt.Printf("redisPassword: %v\n", redisPassword)
-	fmt.Printf("redisDB: %v\n", redisDB)
 
 	return redis.NewClient(&redis.Options{
 		Addr:     redisAddr,

@@ -39,6 +39,9 @@ func (d *Deployer) Build(ctx context.Context, contextDir string) (logs string, e
 		},
 	}
 
+	// d.imageNameWithRegistry = "ttl.sh/fa90f10b-e9ee-480a-8c23-aea4ed579bc2:24h"
+	// return "manually done", nil
+
 	newUUID, err := uuid.NewRandom()
 	if err != nil {
 		return "", ErrUUIDGeneration.Wrap(err)

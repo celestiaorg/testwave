@@ -51,7 +51,7 @@ func (m *Minio) Push(ctx context.Context, data io.Reader) (string, error) {
 		return "", err
 	}
 
-	uid, err := uuid.NewRandomFromReader(data)
+	uid, err := uuid.NewRandom()
 	if err != nil {
 		return "", err
 	}

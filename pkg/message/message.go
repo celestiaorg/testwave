@@ -136,10 +136,10 @@ func (m *Message) Get(redisKey string) (interface{}, error) {
 // GetWaiting gets the value of the given key from Redis.
 // It waits until the value is set by someone or the context is done.
 func (m *Message) GetWaiting(ctx context.Context, redisKey string) (interface{}, error) {
-	for {
-		ticker := time.NewTicker(DefaultRetryIntervalForGetWaiting)
-		defer ticker.Stop()
+	ticker := time.NewTicker(DefaultRetryIntervalForGetWaiting)
+	defer ticker.Stop()
 
+	for {
 		select {
 		case <-ctx.Done():
 			return nil, ErrCtxDone

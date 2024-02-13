@@ -62,15 +62,17 @@ func logsCmd() *cobra.Command {
 					os.Exit(1)
 				}
 
-				containerSearchMap := make(map[int64]string)
-				podSearchMap := make(map[string]string) // key: container name, value: pod name
+				type container struct {
+					name string
+					pod  string
+				}
+				searchMap := make(map[int64]container) // key: menu number, value: container+pod name
 				counter := int64(1)
 				for _, p := range pods {
 					pName := p.Name + " - " + timeAgo(p.CreationTimestamp.Time)
 					fmt.Printf("pod: %s%s%s\n", colorGreen, pName, colorReset)
 					for _, c := range p.Status.ContainerStatuses {
-						containerSearchMap[counter] = c.Name
-						podSearchMap[c.Name] = p.Name
+						searchMap[counter] = container{name: c.Name, pod: p.Name}
 
 						var status string
 						if c.State.Running != nil {
@@ -100,31 +102,25 @@ func logsCmd() *cobra.Command {
 					continue
 				}
 
-				containerNumber, err := strconv.ParseInt(input, 10, 64)
+				conNumber, err := strconv.ParseInt(input, 10, 64)
 				if err != nil {
 					log.Printf("Invalid input: %v", err)
 					continue
 				}
 
-				if containerNumber == 0 {
+				if conNumber == 0 {
 					return nil
 				}
 
-				containerName, ok := containerSearchMap[containerNumber]
+				conInfo, ok := searchMap[conNumber]
 				if !ok {
-					logrus.Errorf("Invalid container number: %d", containerNumber)
+					logrus.Errorf("Invalid container number: %d", conNumber)
 					continue
 				}
 
-				podName, ok := podSearchMap[containerName]
-				if !ok {
-					logrus.Errorf("Invalid pod name for container: %s", containerName)
-					continue
-				}
+				logrus.Infof("Logs for pod: %s container: %s", conInfo.pod, conInfo.name)
 
-				logrus.Infof("Logs for pod: %s container: %s", podName, containerName)
-
-				logsReader, err := cLog.LogsReader(ctx, podName, containerName)
+				logsReader, err := cLog.LogsReader(context.Background(), conInfo.pod, conInfo.name)
 				if err != nil {
 					logrus.Errorf("Error getting logs reader: %v", err)
 					continue
@@ -155,7 +151,7 @@ func logsCmd() *cobra.Command {
 	defaultKubeConfig := homedir + "/.kube/config"
 	cmd.Flags().StringVar(&flagsLogs.kubeConfig, flagKubeConfig, defaultKubeConfig, "Path to kubeconfig file")
 	cmd.Flags().StringVar(&flagsLogs.namespace, flagNamespace, "default", "Kubernetes namespace")
-	cmd.Flags().IntVar(&flagsLogs.timeout, flagTimeout, 5, "Timeout for fetching data (in minutes)")
+	cmd.Flags().IntVar(&flagsLogs.timeout, flagTimeout, 1, "Timeout for fetching data (in minutes)")
 
 	return cmd
 }

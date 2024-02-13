@@ -11,17 +11,19 @@ import (
 )
 
 const (
-	flagNamespace  = "namespace"
-	flagContextDir = "context-dir"
-	flagTimeout    = "timeout"
+	flagNamespace     = "namespace"
+	flagContextDir    = "context-dir"
+	flagTimeout       = "timeout"
+	flagWithBuildLogs = "with-build-logs"
 )
 
 var flagsStart struct {
-	kubeConfig string
-	namespace  string
-	contextDir string
-	timeout    int
-	logLevel   string
+	kubeConfig    string
+	namespace     string
+	contextDir    string
+	timeout       int
+	logLevel      string
+	withBuildLogs bool
 }
 
 func startCmd() *cobra.Command {
@@ -55,7 +57,10 @@ func startCmd() *cobra.Command {
 			defer cancel()
 
 			logs, err := dp.Build(ctx, flagsStart.contextDir)
-			printUnQuotedLogs(logs)
+			// We keep this first print here to show the logs even if the build fails
+			if flagsStart.withBuildLogs {
+				printUnQuotedLogs(logs)
+			}
 			if err != nil {
 				logrus.Errorf("Error building dispatcher images: %v", err)
 				os.Exit(1)
@@ -64,6 +69,7 @@ func startCmd() *cobra.Command {
 			logrus.Infof("Image built: %s", dp.ImageName())
 
 			logs, err = dp.Deploy(ctx)
+			// We keep this first print here to show the logs even if the deploy fails
 			printUnQuotedLogs(logs)
 			if err != nil {
 				logrus.Errorf("Error deploying dispatcher image: %v", err)
@@ -93,6 +99,7 @@ func startCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flagsStart.contextDir, flagContextDir, defaultContextDir, "Context directory")
 	cmd.Flags().IntVar(&flagsStart.timeout, flagTimeout, 10, "Timeout for the test deployment (in minutes)")
 	cmd.Flags().StringVar(&flagsStart.logLevel, flagLogLevel, "info", "Log level")
+	cmd.Flags().BoolVar(&flagsStart.withBuildLogs, flagWithBuildLogs, false, "Print build logs")
 
 	return cmd
 }
