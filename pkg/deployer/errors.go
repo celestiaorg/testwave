@@ -27,4 +27,5 @@ var (
 	ErrGetUserHomeDir             = &Error{Code: "GetUserHomeDirError", Message: "Error getting user home directory"}
 	ErrBuildingKubeconfig         = &Error{Code: "BuildingKubeconfigError", Message: "Error building kubeconfig"}
 	ErrGettingContainerLogs       = &Error{Code: "GettingContainerLogsError", Message: "Error getting container logs"}
+	ErrAddFilesToPod              = &Error{Code: "AddFilesToPodError", Message: "Error adding files to pod"}
 )

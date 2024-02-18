@@ -39,9 +39,6 @@ func (d *Deployer) Build(ctx context.Context, contextDir string) (logs string, e
 		},
 	}
 
-	// d.imageNameWithRegistry = "ttl.sh/fa90f10b-e9ee-480a-8c23-aea4ed579bc2:24h"
-	// return "manually done", nil
-
 	newUUID, err := uuid.NewRandom()
 	if err != nil {
 		return "", ErrUUIDGeneration.Wrap(err)
@@ -81,6 +78,9 @@ func (d *Deployer) Deploy(ctx context.Context) (logs string, err error) {
 		homedir + "/.minikube/profiles/minikube/client.key": homedir + "/.minikube/profiles/minikube/client.key",
 		homedir + "/.kube/config":                           "/root/.kube/config",
 	})
+	if err != nil {
+		return "", ErrAddFilesToPod.Wrap(err)
+	}
 	pod.Spec.Containers[0].VolumeMounts = vols
 
 	_, err = d.Clientset.CoreV1().Pods(d.Namespace).Create(ctx, pod, metav1.CreateOptions{})
