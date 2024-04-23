@@ -35,6 +35,8 @@ const (
 	minioDeploymentAppLabel   = "app"
 	minioDeploymentMinioLabel = "minio"
 
+	// TODO: WARNING: MINIO_ACCESS_KEY and MINIO_SECRET_KEY are deprecated.
+	// TODO: Please use MINIO_ROOT_USER and MINIO_ROOT_PASSWORD
 	EnvMinioAccessKey = "MINIO_ACCESS_KEY"
 	EnvMinioSecretKey = "MINIO_SECRET_KEY"
 )
