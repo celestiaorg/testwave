@@ -2,7 +2,6 @@ package deployer
 
 import (
 	"context"
-	"os"
 
 	"github.com/celestiaorg/knuu/pkg/builder"
 	"github.com/celestiaorg/knuu/pkg/builder/kaniko"
@@ -10,6 +9,7 @@ import (
 	"github.com/celestiaorg/testwave/pkg/dispatcher"
 	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -65,23 +65,25 @@ func (d *Deployer) Deploy(ctx context.Context) (logs string, err error) {
 	}
 	d.podName = pod.Name
 
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return "", ErrGetUserHomeDir.Wrap(err)
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pod.Name,
+			Namespace: dsp.Namespace,
+			Labels:    map[string]string{"app": pod.Name},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				Verbs:     []string{"*"},
+				APIGroups: []string{"*"},
+				Resources: []string{"*"},
+			},
+		},
 	}
 
-	// TODO: need to find a better way to share secrets with the dispatcher node
-	pod, vols, err := dsp.AddFilesToPod(ctx, pod, map[string]string{
-		homedir + "/.minikube/ca.crt":                       homedir + "/.minikube/ca.crt",
-		homedir + "/.minikube/ca.key":                       homedir + "/.minikube/ca.key",
-		homedir + "/.minikube/profiles/minikube/client.crt": homedir + "/.minikube/profiles/minikube/client.crt",
-		homedir + "/.minikube/profiles/minikube/client.key": homedir + "/.minikube/profiles/minikube/client.key",
-		homedir + "/.kube/config":                           "/root/.kube/config",
-	})
+	_, err = d.Clientset.RbacV1().Roles(d.Namespace).Create(ctx, role, metav1.CreateOptions{})
 	if err != nil {
-		return "", ErrAddFilesToPod.Wrap(err)
+		return "", ErrCreateDispatcherRole.Wrap(err)
 	}
-	pod.Spec.Containers[0].VolumeMounts = vols
 
 	_, err = d.Clientset.CoreV1().Pods(d.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {

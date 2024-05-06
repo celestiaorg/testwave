@@ -28,4 +28,5 @@ var (
 	ErrBuildingKubeconfig         = &Error{Code: "BuildingKubeconfigError", Message: "Error building kubeconfig"}
 	ErrGettingContainerLogs       = &Error{Code: "GettingContainerLogsError", Message: "Error getting container logs"}
 	ErrAddFilesToPod              = &Error{Code: "AddFilesToPodError", Message: "Error adding files to pod"}
+	ErrCreateDispatcherRole       = &Error{Code: "CreateDispatcherRoleError", Message: "Error creating dispatcher role"}
 )
